@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boss Predictor — Evony Tools</title>
+<meta name="description" content="Deterministic PvE boss outcome predictor for Evony: The King's Return. Evaluates every boss in one click. No randomness, fully reproducible.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<a class="skip-link" href="#mainContent">Skip to main content</a>
+
+<header class="site-header">
+  <a class="back-home" href="https://warden-cmyk.github.io/evony-tools/">&larr; Return to Evony Tools</a>
+  <div class="banner">
+    <a class="brand" href="https://warden-cmyk.github.io/evony-tools/">
+      <span class="brand-icon" aria-hidden="true">🏰</span>
+      <span class="brand-text">Evony Tools</span>
+    </a>
+    <p class="brand-sub">The King's Return Utility Center</p>
+  </div>
+  <nav class="site-nav" aria-label="Primary">
+    <a href="https://warden-cmyk.github.io/evony-tools/">Home</a>
+    <a href="https://warden-cmyk.github.io/evony-resource-advisor/">Resource Advisor</a>
+    <a href="https://warden-cmyk.github.io/evony-defense-planner/">Defense Planner</a>
+    <a href="https://warden-cmyk.github.io/evony-prestige-tracker/">Prestige Tracker</a>
+    <a href="#" class="active" aria-current="page">Boss Predictor</a>
+  </nav>
+</header>
+
+<main class="page" id="mainContent">
+
+  <section class="page-title">
+    <h1><span aria-hidden="true">⚔️</span> PvE Boss Predictor</h1>
+    <p class="subtitle">Enter your march stats once and press Calculate. Every boss in the database is evaluated automatically — no need to pick a boss or run one at a time.</p>
+  </section>
+
+  <section class="panel input-panel">
+    <h2>Your March</h2>
+    <form id="statForm" autocomplete="off">
+
+      <div class="field-grid">
+        <div class="field">
+          <label for="troopType">Troop Type</label>
+          <select id="troopType">
+            <option value="ground">Ground</option>
+            <option value="archer">Archer</option>
+            <option value="mounted" selected>Mounted</option>
+            <option value="siege">Siege</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="troopTier">Troop Tier</label>
+          <select id="troopTier"></select>
+        </div>
+
+        <div class="field">
+          <label for="marchSize">March Size <span class="hint">(troop count)</span></label>
+          <input type="number" id="marchSize" min="1" step="1" placeholder="e.g. 500000" required>
+        </div>
+      </div>
+
+      <h3 class="divider-label">Your Buffs <span class="hint">(total % bonus from research, gear, generals &amp; skills combined — 0 if none)</span></h3>
+      <div class="field-grid">
+        <div class="field">
+          <label for="attackPct">Attack %</label>
+          <input type="number" id="attackPct" min="0" step="any" value="0">
+        </div>
+        <div class="field">
+          <label for="defensePct">Defense %</label>
+          <input type="number" id="defensePct" min="0" step="any" value="0">
+        </div>
+        <div class="field">
+          <label for="hpPct">HP %</label>
+          <input type="number" id="hpPct" min="0" step="any" value="0">
+        </div>
+      </div>
+
+      <h3 class="divider-label">Boss Debuffs <span class="hint">(the debuff your march inflicts ON the boss — from debuff generals, skills, or gear — 0 if none)</span></h3>
+      <div class="field-grid">
+        <div class="field">
+          <label for="bossAtkDebuff">Boss Attack Debuff %</label>
+          <input type="number" id="bossAtkDebuff" min="0" max="100" step="any" value="0">
+        </div>
+        <div class="field">
+          <label for="bossDefDebuff">Boss Defense Debuff %</label>
+          <input type="number" id="bossDefDebuff" min="0" max="100" step="any" value="0">
+        </div>
+        <div class="field">
+          <label for="bossHpDebuff">Boss HP Debuff % <span class="hint">(not applied — boss HP cannot be debuffed)</span></label>
+          <input type="number" id="bossHpDebuff" min="0" max="100" step="any" value="0">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Calculate</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="dashboard" id="dashboard" hidden aria-label="Prediction summary">
+    <div class="dash-card" data-metric="total">
+      <span class="dash-label">Total Bosses</span>
+      <span class="dash-value" id="dashTotal">—</span>
+    </div>
+    <div class="dash-card dash-victory" data-metric="victories">
+      <span class="dash-label">Predicted Victories</span>
+      <span class="dash-value" id="dashVictories">—</span>
+    </div>
+    <div class="dash-card dash-defeat" data-metric="defeats">
+      <span class="dash-label">Predicted Defeats</span>
+      <span class="dash-value" id="dashDefeats">—</span>
+    </div>
+    <div class="dash-card" data-metric="avg-wounded">
+      <span class="dash-label">Average Wounded</span>
+      <span class="dash-value" id="dashAvgWounded">—</span>
+    </div>
+    <div class="dash-card dash-highlight" data-metric="highest">
+      <span class="dash-label">Toughest Predicted Fight</span>
+      <span class="dash-value dash-value-name" id="dashHighest">—</span>
+    </div>
+    <div class="dash-card dash-highlight" data-metric="lowest">
+      <span class="dash-label">Easiest Predicted Fight</span>
+      <span class="dash-value dash-value-name" id="dashLowest">—</span>
+    </div>
+  </section>
+
+  <section class="panel results-panel" id="resultsPanel" hidden>
+    <div class="results-head">
+      <h2>Predicted Outcomes — Every Boss</h2>
+      <p class="results-summary" id="resultsSummary"></p>
+    </div>
+
+    <div class="filter-bar" role="search" aria-label="Filter boss results">
+      <div class="field filter-search">
+        <label for="bossSearch">Search Boss</label>
+        <input type="text" id="bossSearch" placeholder="Type a boss name…">
+      </div>
+      <div class="field filter-toggle-group">
+        <span class="filter-toggle-label">Result</span>
+        <div class="toggle-pair">
+          <label class="check-pill">
+            <input type="checkbox" id="filterVictory" checked>
+            <span>Victories</span>
+          </label>
+          <label class="check-pill">
+            <input type="checkbox" id="filterDefeat" checked>
+            <span>Defeats</span>
+          </label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="filterConfidence">Confidence</label>
+        <select id="filterConfidence">
+          <option value="all">All</option>
+          <option value="Very High">Very High</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+          <option value="None">None</option>
+        </select>
+      </div>
+      <div class="field filter-clear-wrap">
+        <button type="button" id="clearFiltersBtn" class="btn btn-secondary btn-compact">Clear Filters</button>
+      </div>
+    </div>
+
+    <p class="filter-empty" id="filterEmptyMsg" hidden>No bosses match the current filters.</p>
+
+    <div class="table-wrap">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th data-key="name" tabindex="0">Boss</th>
+            <th data-key="victory" tabindex="0">Result</th>
+            <th data-key="wounded" tabindex="0">Estimated Wounded</th>
+            <th data-key="woundPct" tabindex="0">Wound %</th>
+            <th data-key="recommendedMarch" tabindex="0">Recommended March</th>
+            <th data-key="confidence" tabindex="0">Confidence</th>
+            <th class="th-actions"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="results-cards" id="resultsCards"></div>
+  </section>
+
+  <section class="panel" id="detailPanel" hidden>
+    <h2 id="detailTitle">Boss Detail</h2>
+    <div id="detailBody"></div>
+    <h3 class="divider-label">Log the Real Outcome</h3>
+    <p class="hint">Fought this boss already? Log what actually happened. This builds a local, reproducible dataset used to correct the model — see Methodology below.</p>
+    <form id="logForm" class="log-form">
+      <div class="field-grid">
+        <div class="field">
+          <label for="logResult">Actual Result</label>
+          <select id="logResult">
+            <option value="victory">Victory</option>
+            <option value="defeat">Defeat</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="logWounded">Actual Wounded</label>
+          <input type="number" id="logWounded" min="0" step="1" value="0">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save Report Locally</button>
+        <button type="button" id="issueBtn" class="btn btn-secondary">Report a Correction on GitHub</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel" id="logPanel">
+    <h2>Your Battle Report Log <span class="hint">(stored only in this browser)</span></h2>
+    <div class="table-wrap">
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th>Boss</th><th>Troop</th><th>March</th><th>Predicted</th><th>Actual</th><th>Wounded</th><th><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+    <div class="form-actions">
+      <button type="button" id="exportLogBtn" class="btn btn-secondary">Export Log (JSON)</button>
+      <button type="button" id="clearLogBtn" class="btn btn-danger">Clear Log</button>
+    </div>
+  </section>
+
+  <section class="panel methodology">
+    <h2>Methodology <span class="hint">(read this before trusting any number)</span></h2>
+    <details>
+      <summary>How predictions are calculated — fully deterministic, no randomness</summary>
+      <ol>
+        <li><strong>Your per-troop stats</strong> come from the base attack/defense/HP lookup table for your chosen troop type and tier (T1–T17), each multiplied by your Attack/Defense/HP buff percentages.</li>
+        <li><strong>The monster's stats</strong> come from the monster database (every entry has an explicit Attack, Defense, HP and troop count). Your <em>Boss Attack/Defense Debuff %</em> inputs reduce the monster's attack/defense directly. The monster's HP is never reduced by a debuff — this matches the reference engine, which has no HP-debuff mechanism.</li>
+        <li><strong>A troop modifier</strong> is looked up for the matchup: world bosses and alliance bosses use their own modifier tables, common monsters use a simple tier/troop-type rule, other bosses use a tier-vs-boss modifier table, and everything else falls back to the monster's own per-troop-type modifiers.</li>
+        <li><strong>Damage per troop</strong> = Your Attack × Troop Modifier, then attenuated by an attack-vs-defense contest factor: Your Attack ÷ (Your Attack + Monster Defense).</li>
+        <li><strong>Recommended Minimum March</strong> = the troop count whose total damage output kills the monster's entire HP pool (Monster HP × Monster Troop Count) in one exchange — a closed-form calculation, not a search. <strong>Victory</strong> is called when your march size meets or exceeds that number.</li>
+        <li><strong>Estimated Wounded</strong> = Monster Attack × Monster Troop Count ÷ Your Per-Troop HP, capped at your march size, on a Victory. A Defeat is recorded as a full loss.</li>
+        <li><strong>Confidence</strong> is a plain read of how much safety margin the result has: Very High (≈0% wounded) down to None (Defeat).</li>
+      </ol>
+      <p><strong>Honesty note:</strong> This model is ported from the community-maintained Game-EvonyTKR Monster Simulator (see <code>METHODOLOGY.md</code> in the project repository), with the monster database and every lookup table sourced from <code>data.js</code>. Evony does not publish its internal combat formula, so treat this as a documented, reproducible approximation of the community-maintained reference implementation — not a leak of real game data. When your real result disagrees with the prediction, log it below.</p>
+    </details>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="footer-links">
+    <a href="https://warden-cmyk.github.io/evony-tools/">Evony Tools</a>
+    <a href="https://warden-cmyk.github.io/evony-resource-advisor/">Resource Advisor</a>
+    <a href="https://warden-cmyk.github.io/evony-defense-planner/">Defense Planner</a>
+    <a href="https://warden-cmyk.github.io/evony-prestige-tracker/">Prestige Tracker</a>
+  </div>
+  <p>Evony Boss Predictor — a tool from the Evony Tools hub. Deterministic. No login. No server. Version <span id="verTag">4.0</span>.</p>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
